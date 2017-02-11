@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+    <!-- What we are graphing here is a simple series of bars - one for each person, with the heigh of bar representing their age.
+    There is no title or axis labels in this example. -->
+<head>
+    <meta charset="utf-8">
+    <title>01-barchart-ages</title>
+    <style> 
+/* These are our styles - they change the look and feel of our text and graphs elements, including fonts, colours, and line sizes */
+
+.bar { fill: steelblue; }
+
+</style>
+</head>
+
+<body>
+
+    <!-- Load the main d3 v4 package over the protocol used to access the index.html!
+    The d3 v4 script is a collection of data and visualisation functions that help us to write a variety of graphs and other visualisations.
+    There is a large single script that can be used, or smaller modules if you want to use specific parts.
+     -->
+    <script src="//d3js.org/d3.v4.min.js"></script>
+
+    <!-- This is where we use d3 to read data and produce a simple bar chart. This scripts runs after the d3 script is loaded - which is crucial. -->
+    <script>
+        /* Here we define our total screen size, that comprises both the graph size as well as padding. Note that these values are fixed, and don't scale
+        according to the screen's size - something that we'll address in a later example. */
+        var totalHeight = 960, totalWidth = 800;
+
+        /* Here we define the padding to the sides of our graph - this is idiomatic d3. This padding needs to have enough space to fix our axis descriptions, 
+        our titles, and so on. The idea is that we should define these values once, so we can change these values just once, below, and everything resizes 
+        automatically (without changing any other code). */
+        var margin = { top: 20, right: 20, bottom: 30, left: 40 }
+
+        /* Here we derive the the width and height of the graph, based on the difference between our total area and our padding. */
+        var width = totalWidth - margin.left - margin.right,
+            height = totalHeight - margin.top - margin.bottom;
+
+        /* Here, we are creating our graphical element. D3 uses a technology called SVG to draw our lines, bars, and text. SVG stands for Scalable Vector
+        Graphics, and it's major characteristic is that in can grow or shrink and still look good, because the image consists of shapes whose positions
+        are defined with numbers that we can scale cleanly. Contract this to, say, JPGs, which would might have much richer detail, but look jagged when
+        scaled. SVG is built into modern browsers - we don't need to include any special scripts. */
+
+        /* Here's a sample SVG element, in explicit html - it's the Italian flag.
+        <svg xmlns="http://www.w3.org/2000/svg" width="150" height="100" viewBox="0 0 3 2">
+            <rect width="1" height="2" x="0" fill="#008d46" />
+            <rect width="1" height="2" x="1" fill="#ffffff" />
+            <rect width="1" height="2" x="2" fill="#d2232c" />
+        </svg>
+        */
+
+        /* Here, we select the body html element, then add an svg element to it. This svg element will be where the draw our chart.
+        Next, we give it our width and height from above, with extra padding, and then append a g element to it. Whereas the svg element is our SVG container
+        within the HTML document, our g element is what contains our graphs lines and text. The transform of translate is what ensures that our axex and lines
+        will be drawn where we want, so that our padding is honored. */
+        var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        /* Here we call our d3 function that will read a CSV file, and on accessing the data, invoke our function once to print the associated bars, etc. D3
+        also supports reading from other file formats, like TSVs and JSON. D3 will read our CSV and construct variable data for us, which contains an
+        object for each element in our CSV. Each of those objects will have a field identified by the CSV header, whose value will be set correctly. */
+        d3.csv("ages.csv", function (error, data) {
+            /* If D3 failed to read our CSV, just throw an error and bail out. We can do better, but this is good enough for now. */
+            if (error)
+                throw error;
+
+            /* We need to loop over each item in our data array and make sure the numeric height is numeric, rather than a string. */
+            data.forEach(function (d) {
+                d.age = +d.age;
+            });
+
+            /* Here we define scales - functions that will convert the magnitude of a value in one domain to some other range. Why would we want to do that? 
+            Well, in this chart, we might have data (message counts) ranging from 0 to 30000, but we need to convert a given value in that domain back to a 
+            screen size range, so it can be graphed. For example, if our data his a minimum of 0 and a maximum of 30000, then an item of value 15000 is 50% of the
+            way up in that domain. If the range of our screen size is 0 to, say, 1000 pixels, then 50% of 1000 is 500 - and that's how big our line would need to 
+            be in pixels. That's a pretty trivial example, but they can get a lot more complex than that - sometimes, they won't be linear, or they'll be 
+            time-based, or we'll need to go the other direction - from screen size back to data. The scale methods save us doing many of these calculations 
+            ourselves. */
+            /* First off, here's out x scale for our categories. We want the scale to be a band of items, rather than a continuous set of numbers. The range is
+            our screen width, in pixels, and the domain we convert from will be out different categories. We feed in each item from our dataset and the scale
+            keeps track of them for us. How we will use this scale is to get the horizontal position of the bar to write - for instance, x('categoryA') 
+            might be 100, meaning categoryA's bar should be 100 pixels to the right. Note that the range is from 0 to width, meaning later items in our
+            domain will get bigger values from the scale. Padding will tell D3 how much space to put between the bars - try playing with this value! */
+            var x = d3.scaleBand()
+                .range([0, width])
+                .padding(0.2)
+                .domain(data.map(function (d) { return d.name; }));
+            /* Now our y scale. The range of values here is our chart height, and the domain will be defined as the minimum to maximum data values 
+            from our data set. Note that our range starts at height (say, 1000 pixels) and ends with 0. This will result in us getting lower values for 
+            the bigger data values we pass in. We want this behaviour of the way drawing in SVG works - left to right, but top to bottom rather than bottom
+            to top. We're assuming our minimum logical data is 0, and we're also using a d3.max convenience function to get the biggest data item. */
+            var y = d3.scaleLinear()
+                .range([height, 0])
+                .domain([0, d3.max(data, function (d) { return d.age; })]);
+
+            /* Okay, here's where the real magic happens. This is where we produce our actual bars. */
+            /* First off, we select all html elements of class bar within our svg element - of which there will be none, at this point. */
+            svg.selectAll(".bar")
+                /* Now, we bind our data against the svg element. This is important for following steps. This basically associates the data we read from
+                our CSV with the elements we selected, creating a relationship that D3 can track. This is important for when we want to make our graphs update
+                with new data - since we can track what has already been drawn. */
+                .data(data)
+                /* Here we access our enter selection. The enter selection will get all our items from CSV that do now yet have a bar drawn for them, according
+                to the bind we did earlier. We know that for these items, we need to draw a bar (rect SVG element). There are other kinds of selections
+                that we will see in the futures - and using these different selections will help us ensure we only draw new shapes when we need to. The
+                calls that follow will run for each rect-less data item that enter() selects. */
+                .enter()
+                /* Draw an SVG rect, which will represent our bar. */
+                .append("rect")
+                /* Use the style from our CSS class bar on these rect elements. */
+                .attr("class", "bar")
+                /* Set the X position using the scale we defined earlier. */
+                .attr("x", function (d) { return x(d.name); })
+                /* Set the width of the X bar by using the D3 scale we set up before. Basically, D3 will determine, based on our width, number of items,
+                and padding, how thick each bar should be. */
+                .attr("width", x.bandwidth())
+                /* Using our Y scale, give us the starting position for our bar, remembering the we draw from top to bottom. That is, a big d.height value
+                will give us a small y(d.height), meaning that our bar will nearly touch the top of our SVG container. */
+                .attr("y", function (d) { return y(d.age); })
+                /* The height attribute is how tall the bar is. If the data item is really big, y(d.height) will return a very small numbers, and height -
+                y(d.height) will therefore be very big, giving us a big tall bar */
+                .attr("height", function (d) { return height - y(d.age); });
+
+            /* Here we create our X axis. D3 has a lot of options for axes, but below we are just using a very simple tick axis that start from the bottom
+            and flows to right right. The translate transform ensures that we draw the axis starting at the bottom left. */
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+
+            /* Here we create our Y axis. We want this one to start in the top left (0, 0), so no translate is required. The axisLeft axis will be on the left
+            hand side of our graph, which is what we want here. */
+            svg.append("g")
+                .call(d3.axisLeft(y));
+
+        });
+
+    </script>
+</body>
+
+</html>
