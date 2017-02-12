@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<!-- For this graph, we are again plotting bars - but our bands are slices of time (0 to 10 millisecond, 10 to 20, etc) and we want to
+have a nice grey bar effect, and hotter colours as the magnitude of counts for the band increases. -->
+
+<head>
+    <meta charset="utf-8">
+    <title>03-bar-distribution</title>
+    <style> 
+
+/* Classes for our bars - our grey bars. */
+.barGrey { fill: #f7f8f9; }
+.barCount { fill: lawngreen; }
+
+body {
+        font-family: "Noto Sans", sans-serif;
+        font-size: 12px;
+      }
+</style>
+<!-- Here we include our Google NotoSans font. If you want to bundle it yourself, locally, switch it for the line below -->
+<link href="https://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet">
+<!--link rel="stylesheet" type="text/css" href="NotoSans-Regular.ttf"-->
+</head>
+
+<body>
+
+    <script src="//d3js.org/d3.v4.min.js"></script>
+
+
+    <script>
+        
+        var totalHeight = 400, totalWidth = 1600;
+        var margin = { top: 80, right: 80, bottom: 80, left: 80 };
+        var width = totalWidth - margin.left - margin.right,
+            height = totalHeight - margin.top - margin.bottom;
+
+        var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        d3.csv("dist.csv", function (error, data) {
+            /* If D3 failed to read our CSV, just throw an error and bail out. We can do better, but this is good enough for now. */
+            if (error)
+                throw error;
+
+            data.forEach(function (d) {
+                d.count = +d.count;
+            });
+
+            /* Our X scale, as before - an entry for each band. */
+            var x = d3.scaleBand()
+                .range([0, width])
+                .padding(0.05)
+                .domain(data.map(function (d) { return d.band; }));
+
+            
+            /* Calculate the highest count in all our data. */
+            var maximumCount = d3.max(data, function (d) { return d.count; });
+
+            /* Our Y scale, for the counts of each band. */
+            var y = d3.scaleLinear()
+                .range([height, 0])
+                .domain([0, maximumCount]);
+
+            /* Here, we define a colour scale. This will be used to colour our increasing response times - low response times are good, and therefore
+            blue, whereas big response times are bad, and therefore red/yellow. Since our low response times are on the very left of our graph, and high
+            times are on the right, we can scale from 0 to width on the domain side - with the help of our x scale. */
+            color = d3.scaleLinear()
+                .range([d3.rgb("#007AFF"), d3.rgb('#FFF500')])
+                .domain([0,width])
+                .interpolate(d3.interpolateHcl);
+
+            /* As last time, we'll bind our data against any existing rects (there are none) and add the data items that don't already have a rect. This
+            first pass will draw the number of counts for the band. */
+            svg.selectAll(".barCount")
+                .data(data)
+                .enter()
+                .append("rect")
+                /* Use the style from our CSS class barCount on these rect elements. */
+                //.attr("class", "barCount")
+                .attr("fill", function(d) { console.log("band is", d.band, "x(band) is", x(d.band), "color(x(d.band)) is", color(x(d.band))); return color(x(d.band))})
+                .attr("x", function (d) { return x(d.band); })
+                .attr("width", x.bandwidth())
+                .attr("y", function (d) { return y(d.count); })
+                .attr("height", function (d) { return height - y(d.count); });
+
+
+            /* This is where we draw our light grey bands, just as a cosmetic effect. */
+            svg.selectAll(".barGrey")
+                .data(data)
+                .enter()
+                .append("rect")
+                ///* Use the style from our CSS class barGrey on these rect elements. */
+                .attr("class", "barGrey")
+                .attr("x", function (d) { return x(d.band); })
+                .attr("width", x.bandwidth())
+                ///* Our grey bars need to reach the very top. */
+                .attr("y", 0)
+                ///* However, we don't want to draw over our rects for the counts - we only want this to be a high as we need for the . */
+                .attr("height", function (d) { return height - y(maximumCount - d.count); });
+
+            /* Here we create our X axis. D3 has a lot of options for axes, but below we are just using a very simple tick axis that start from the bottom
+            and flows to right right. The translate transform ensures that we draw the axis starting at the bottom left. */
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+
+            /* Here we create our Y axis. We want this one to start in the top left (0, 0), so no translate is required. The axisLeft axis will be on the left
+            hand side of our graph, which is what we want here. */
+            svg.append("g")
+                .call(d3.axisLeft(y));
+
+            /* Let's add some decorations. First, let's add a title to the graph. This will appear up the top, centered horizontally. x is derived to be
+            in the middle, whereas y is halfwat down our margin at the top. text-anchor centres the text, and font-size gives the size of our text. */
+            svg.append("text")
+                .attr("x", (width / 2))
+                .attr("y", 0 - (margin.top / 2))
+                .attr("text-anchor", "middle")
+                .style("font-size", "16px")
+                .text("Response Time Summary - March 12, 2016");
+
+            /* Now, a Y axis label. We need to write the text on it's side with the transform of rotate, */
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 0 - margin.left)
+                .attr("x", 0 - height / 2)
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .text("Number of Messages");
+
+            /* This is superfluos, but the X axis makes it 100% clear what the bars relate to. */
+            svg.append("text")
+                // Here, we transform to midway horizontally, and near the very bottom - but within the margin - vertically.
+                .attr("transform", "translate(" + (width / 2) + " ," + (height + margin.top - 10) + ")")
+                .style("text-anchor", "middle")
+                .text("System Response Times (milliseconds)");
+        });
+
+    </script>
+</body>
+
+</html>
