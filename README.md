@@ -8,9 +8,9 @@ In this repo, I add d3-based visualisations that I've implemented, along with th
 
 | Title        | Description           | Link  |
 | ------------- |:-------------:| -----:|
-| 01-barchart-ages | A very simple barchart | http://htmlpreview.github.io/?https://github.com/chrishare/d3-graphs/blob/master/01-barchart-ages/index.html |
-| 02-stacked-barchart | A stacked barchart with labelled axis and a title | http://htmlpreview.github.io/?https://github.com/chrishare/d3-graphs/blob/master/02-stacked-barchart/index.html |
-| 03-bar-distribution | A stacked barchart with scaling colours | http://htmlpreview.github.io/?https://github.com/chrishare/d3-graphs/blob/master/03-bar-distribution/index.html |
+| 01-barchart-ages | A very simple barchart | [Link](http://htmlpreview.github.io/?https://github.com/chrishare/d3-graphs/blob/master/01-barchart-ages/index.html) |
+| 02-stacked-barchart | A stacked barchart with labelled axis and a title | [Link](http://htmlpreview.github.io/?https://github.com/chrishare/d3-graphs/blob/master/02-stacked-barchart/index.html) |
+| 03-bar-distribution | A stacked barchart with scaling colours | [Link](http://htmlpreview.github.io/?https://github.com/chrishare/d3-graphs/blob/master/03-bar-distribution/index.html) |
 
 ***
 **How to run the examples**:
