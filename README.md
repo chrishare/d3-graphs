@@ -17,7 +17,7 @@ In this repo, I add d3-based visualisations that I've implemented, along with th
 
 Unless otherwise specified, you simply need to serve the html/js/css content within the project folder (e.g. barchart-msgcount) as-is, and open the index.html file in your browser. One way to do this is to install nodejs and the http-server module (npm install -g http-server), and then run the following commands:
 ```
-  cd barchar-msgcount
+  cd 01-barchart-ages
 
   http-server
 ```
