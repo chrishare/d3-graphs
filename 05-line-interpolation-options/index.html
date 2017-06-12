@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        /* Standard CSS section for styles */
+
+        .line {
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- In the top left of our page, we define the list of cruves that can be selected. -->
+    <div id="option">
+        <select id="curveSelect">
+            <option value="curveLinear">curveLinear</option>
+            <option value="curveStep">curveStep</option>
+            <option value="curveStepBefore">curveStepBefore</option>
+            <option value="curveStepAfter">curveStepAfter</option>
+            <option value="curveBasis">curveBasis</option>
+            <option value="curveCardinal">curveCardinal</option>
+            <option value="curveMonotoneX">curveMonotoneX</option>
+            <option value="curveCatmullRom">curveCatmullRom</option>
+        </select>
+    </div>
+
+    <script src="//d3js.org/d3.v4.min.js"></script>
+    <script>
+        var margin = { top: 40, right: 20, bottom: 60, left: 50 },
+            width = 960 - margin.left - margin.right,
+            height = 600 - margin.top - margin.bottom;
+
+        // Get a handle to the D3 time parsing function, initialising it to expect this format of tie input: 23-Jun-16
+        var parseTime = d3.timeParse("%d-%b-%y");
+
+        // Define range x as a time series, and y as a linear scale as we have seen before
+        var x = d3.scaleTime().range([0, width]);
+        var y = d3.scaleLinear().range([height, 0]);
+
+        // This is our array of curves. We use this to get the d3 curve that relates to the user choice.
+        var curveArray = [
+            { "d3Curve": d3.curveLinear, "curveTitle": "curveLinear" },
+            { "d3Curve": d3.curveStep, "curveTitle": "curveStep" },
+            { "d3Curve": d3.curveStepBefore, "curveTitle": "curveStepBefore" },
+            { "d3Curve": d3.curveStepAfter, "curveTitle": "curveStepAfter" },
+            { "d3Curve": d3.curveBasis, "curveTitle": "curveBasis" },
+            { "d3Curve": d3.curveCardinal, "curveTitle": "curveCardinal" },
+            { "d3Curve": d3.curveMonotoneX, "curveTitle": "curveMonotoneX" },
+            { "d3Curve": d3.curveCatmullRom, "curveTitle": "curveCatmullRom" },
+            { "d3Curve": d3.curveCatmullRomOpen, "curveTitle": "curveCatmullRomOpen" }
+        ];
+
+        /* Create our d3 line. This is a generator that will accept a data structure, and return that data structure's
+        date and temp values to our x and y scales. This will be invoked by D3 on all of our CSV rows to get a new point on the line. */
+        var line = d3.line()
+            .x(function (d) { return x(d.date); })
+            .y(function (d) { return y(d.temp); });
+
+        // Create the svg and g elements, as always
+        var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+
+        // This will hold our data.
+        var csvData = null;
+
+        /* Here we define a promise - a handle to our CSV that will be available when it is fetched and processed. First of all,
+        the purpose of us abandoning the pattern we have used until now where we have done everything in a one-off listing, 
+        for this promise stuff, is that we want to get a handle to
+        the data object, after it is completely setup, so we don't have to re-request it multiple times when we update. A
+        promise is giving us a hook into this that will only fire on completion, via the resolve method. We can't just work with the
+        result of the d3.csv operation on the next line of code, because d3.csv runs asynchronously. */
+        var promise = new Promise((resolve, reject) => {
+            // Process our ./temperatures.csv file
+            d3.csv("temperatures.csv", function (error, data) {
+                // We had an error - propogate to the caller, maybe they will handle it. Reject the promise.
+                if (error)
+                    reject(error);
+
+                // Format the data - parse the date string as a time, and convert the temp to a numeric value.
+                data.forEach(function (d) {
+                    d.date = parseTime(d.date);
+                    d.temp = +d.temp;
+                });
+
+                // Okay, we have our data now - indicate that the promise has resolved (completed successfully).
+                resolve(data);
+            });
+        });
+
+        // When our CSV data is finished loading, our function on then will fire. Let's complete the one-off stuff.
+        promise.then(function (data) {
+            csvData = data;
+
+            /* Set the domain of our graph; x will vary from the earliest to latest times in the CSV, and y will 
+            vary from 0 to the maximum temp. As with bar charts, very large y values with low variance will not graph nicely - so it might
+            be better to use extents in those situations. */
+            x.domain(d3.extent(csvData, function (d) { return d.date; }));
+            y.domain([0, d3.max(csvData, function (d) { return d.temp; })]);
+
+            /* Add a line path, by supplying our data and the line function constructed earlier. We set the class as line so that our
+            custom color is applied. This is done with no curves to start with - and will be redone whenever a new curve is selected. */
+            svg.append("path")
+                .data([csvData])
+                .attr("class", "line")
+                .attr("d", line);
+
+            // Add a simple x axis
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+
+            // Add a simple y axis
+            svg.append("g")
+                .call(d3.axisLeft(y));
+
+            // Add a title
+            svg.append("text")
+                .attr("x", (width / 2))
+                .attr("y", 0 - (margin.top / 2))
+                .attr("text-anchor", "middle")
+                .style("font-size", "16px")
+                .text("Temperatures using a Dodgy Thermometer - 2016");
+
+            /* Now, a Y axis label. We need to write the text on it's side with the transform of rotate, */
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 0 - margin.left)
+                .attr("x", 0 - height / 2)
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .text("Temp (degress celcius)");
+
+            /* This is superfluos, but the X axis makes it 100% clear what the bars relate to. */
+            svg.append("text")
+                // Here, we transform to midway horizontally, and near the very bottom - but within the margin - vertically.
+                .attr("transform", "translate(" + (width / 2) + " ," + (height + margin.top - 10) + ")")
+                .style("text-anchor", "middle")
+                .text("Date of measurement");
+
+
+        });
+
+        /* Use d3.select to select our option element, and add a trigger that will fire when ever the selected value is changed. */
+        d3.select("#option").on("change", function () {
+            // Get the d3Curve for our selected by finding it in the array.
+            var select_element = document.getElementById("curveSelect");
+            var selectedCurve = select_element[select_element.selectedIndex].value;
+            d3Curve = curveArray.find((curve) => { return curve.curveTitle == selectedCurve; }).d3Curve;
+
+            // Remove the exising line
+            d3.select("path.line").remove();
+
+            // Add the new line with our curve
+            var line = d3.line()
+                .x(function (d) { return x(d.date); })
+                .y(function (d) { return y(d.temp); })
+                .curve(d3Curve);
+
+            // Redraw with the new line settings.
+            svg.append("path")
+                .data([csvData])
+                .attr("class", "line")
+                .attr("d", line);
+        });
+    </script>
+</body>
+
+</html>
