@@ -12,6 +12,7 @@ In this repo, I add d3-based visualisations that I've implemented, along with th
 | 02-stacked-barchart | A stacked barchart with labelled axis and a title | [Link](http://htmlpreview.github.io/?https://github.com/chrishare/d3-graphs/blob/master/02-stacked-barchart/index.html) |
 | 03-bar-distribution | A stacked barchart with scaling colours | [Link](http://htmlpreview.github.io/?https://github.com/chrishare/d3-graphs/blob/master/03-bar-distribution/index.html) |
 | 04-simple-line | A very simple line chart of height over time | [Link](http://htmlpreview.github.io/?https://github.com/chrishare/d3-graphs/blob/master/04-simple-line/index.html) |
+| 05-line-interpolation-options | Allows the user to select a curve for our (jagged) line and redraws using that curve. | [Link](http://htmlpreview.github.io/?https://github.com/chrishare/d3-graphs/blob/master/05-line-interpolation-options/index.html) |
 
 ***
 **How to run the examples**:
