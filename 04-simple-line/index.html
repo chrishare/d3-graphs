@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        /* Standard CSS section for styles */
+
+        .line {
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="//d3js.org/d3.v4.min.js"></script>
+    <script>
+        var margin = { top: 40, right: 20, bottom: 60, left: 50 },
+            width = 960 - margin.left - margin.right,
+            height = 600 - margin.top - margin.bottom;
+
+        // Get a handle to the D3 time parsing function, initialising it to expect this format of tie input: 23-Jun-16
+        var parseTime = d3.timeParse("%d-%b-%y");
+
+        // Define range x as a time series, and y as a linear scale as we have seen before
+        var x = d3.scaleTime().range([0, width]);
+        var y = d3.scaleLinear().range([height, 0]);
+
+        /* Create our d3 line. This is a generator that will accept a data structure, and return that data structure's
+        date and height values to our x and y scales. This will be invoked by D3 on all of our CSV rows to get a new point on the line. */
+        var line = d3.line()
+            .x(function (d) { return x(d.date); })
+            .y(function (d) { return y(d.height); });
+
+        // Create the svg and g elements, as always
+        var svg = d3.select("body").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+
+        // Process our ./height.csv file
+        d3.csv("height.csv", function (error, data) {
+            // We had an error - propogate to the caller, maybe they will handle it.
+            if (error)
+                throw error;
+
+            // Format the data - parse the date string as a time, and convert the height to a numeric value.
+            data.forEach(function (d) {
+                d.date = parseTime(d.date);
+                d.height = +d.height;
+            });
+
+            /* Set the domain of our graph; x will vary from the earliest to latest times in the CSV, and y will 
+            vary from 0 to the maximum height. As with bar charts, very large y values with low variance will not graph nicely - so it might
+            be better to use extents in those situations. */
+            x.domain(d3.extent(data, function (d) { return d.date; }));
+            y.domain([0, d3.max(data, function (d) { return d.height; })]);
+
+            /* Add a line path, by supplying our data and the line function constructed earlier. We set the class as line so that our
+            custom color is applied. */
+            svg.append("path")
+                .data([data])
+                .attr("class", "line")
+                .attr("d", line);
+
+            // Add a simple x axis
+            svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+
+            // Add a simple y axis
+            svg.append("g")
+                .call(d3.axisLeft(y));
+
+        });
+
+        // Add a title
+        svg.append("text")
+            .attr("x", (width / 2))
+            .attr("y", 0 - (margin.top / 2))
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .text("Height of a Fast Growing Child - 2016");
+
+        /* Now, a Y axis label. We need to write the text on it's side with the transform of rotate, */
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 0 - margin.left)
+            .attr("x", 0 - height / 2)
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text("Height (cm)");
+
+        /* This is superfluos, but the X axis makes it 100% clear what the bars relate to. */
+        svg.append("text")
+            // Here, we transform to midway horizontally, and near the very bottom - but within the margin - vertically.
+            .attr("transform", "translate(" + (width / 2) + " ," + (height + margin.top - 10) + ")")
+            .style("text-anchor", "middle")
+            .text("Date of measurement");
+    </script>
+</body>
+
+</html>
